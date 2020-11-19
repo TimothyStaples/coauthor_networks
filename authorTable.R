@@ -7,13 +7,14 @@ setwd("/home/timothy/Dropbox/Tim/CV/collabNetwork")
 
 # cycle through wos subfolder to import 500 paper blocks
 wosFiles <- list.files(path="./wos", include.dirs=TRUE)
+
 coAuthPapers <- do.call("rbind", lapply(1:length(wosFiles), function(n){
   temp <- as.data.frame(read_excel(paste0("./wos/", wosFiles[n])))
   
   authorList <- strsplit(temp$`Author Full Names`, "; ")
   do.call("rbind", lapply(1:length(authorList), function(n1){
     data.frame(auth = authorList[[n1]],
-               pID = n1)
+               pID = ((n-1)*500) + n1)
   }))
   
   }))
@@ -28,8 +29,8 @@ coAuthPapers$full <- paste0(coAuthPapers$first, " ", coAuthPapers$surname)
 authors <- sort(unique(coAuthPapers$full))
 coAuthMat <- matrix(0, nrow = length(authors) , ncol = length(authors),
                     dimnames=list(authors, authors))
-coAuthTable <- sapply(authors, function(name){
-  print(name)
+for(name in authors){
+print(name)
   # get authored papers
   subPapers <- coAuthPapers[coAuthPapers$full == name,]
   subPapers <- coAuthPapers[coAuthPapers$pID %in% subPapers$pID,]
@@ -37,28 +38,38 @@ coAuthTable <- sapply(authors, function(name){
   coTable <- table(subPapers$full)
   
   coAuthMat[cbind(which(rownames(coAuthMat) == name),
-                  match(subPapers$full, names(coTable)))] = coTable
+                  match(names(coTable), colnames(coAuthMat)))] = coTable
   
-  })
+}
 
 
-myPapers <- read.csv("file:///home/timothy/Dropbox/Tim/CV/collabNetwork/savedrecs.csv")
+mycoAuth <- colnames(coAuthMat[,coAuthMat["Timothy L. Staples",] > 0])
+mycoAuthMat <- coAuthMat[mycoAuth, ]
+mycoAuthMat <- mycoAuthMat[, colSums(mycoAuthMat > 0) > 1]
 
-coAuth <- unique(unlist(strsplit(myPapers$Author.Full.Names, "; ")))
-paste0(coAuth, collapse='" OR "')
+aTab <- data.frame(source = rep(rownames(mycoAuthMat), ncol(mycoAuthMat)),
+                   target = rep(colnames(mycoAuthMat), each=nrow(mycoAuthMat)),
+                   count=as.vector(mycoAuthMat))
+aTab <- aTab[aTab$source != aTab$target,]
+aTab <- aTab[aTab$count > 0,]
+aTab$primary <- ifelse(aTab$target %in% mycoAuth, "#324158", "#8C96A6")
+aTab$width <- ifelse(aTab$target %in% mycoAuth, 2, 0.5)
 
-# regardless, now we can make a co-author table and use it to populate a
-# network plot in d3.js
-aTab$Me = "Timothy L Staples"
-aTab <- aTab[!agrepl("Timothy L Staples", aTab$myCoAv),]
-aTab <- aTab[,c("Me", "myCoAv", "Freq")]
-colnames(aTab) = c("source", "target", "count")
+aTab[aTab$source == "Timothy L. Staples"]
+
+countWithMe <- sapply(split(aTab, f=aTab$target), function(x){
+  sum(x$count[x$source == "Timothy L. Staples"])
+})
+
+
+  
 # convert table into graph
 library(igraph)
 network=graph_from_data_frame(d=aTab, directed=F)
 
-E(network)$weight = aTab$count
-
+V(network)$count = countWithMe[match(V(network)$name, names(countWithMe))]
+V(network)$count <- ifelse(V(network)$count == 0, 5, 10*V(network)$count)
+V(network)$primary <- aTab$primary[match(V(network)$name, aTab$target)]
 
 # Transform it in a JSON format for d3.js
 library(d3r)

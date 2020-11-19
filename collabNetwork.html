@@ -46,7 +46,7 @@ var div = d3.select("body").append("div")
 
 var simulation = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-500))
+    .force("charge", d3.forceManyBody().strength(-200))
     .force('collision', d3.forceCollide().radius(function(d) {
     return d.radius
   }))
@@ -58,19 +58,22 @@ d3.json("data.json", function(error, graph) {
   console.log(graph)
 
   var link = svg.append("g")
-      .attr("class", "links")
+     .attr("class", "links")
     .selectAll("line")
     .data(graph.links)
     .enter().append("line")
-    .attr("stroke-width", function(d) { return d.count});
-
+    .attr("stroke-width", function(d){return d.width})
+    .style("stroke", function(d){return d.primary});
+    
   var node = svg.append("g")
       .attr("class", "nodes")
     .selectAll("circle")
     .data(graph.nodes)
     .enter().append("circle")
-      .attr("r", 10)
-      .attr("fill", "#324158")
+      .attr("r", function(d) {return d.count})
+      .attr("fill",  function(d) {return d.primary})
+      //.style("stroke", "white")
+      //.style("stroke-width", 0.5)
       .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
@@ -80,7 +83,7 @@ d3.json("data.json", function(error, graph) {
                       //Increase point size
                       d3.select(this).transition()
                       .duration("100")
-                      .attr("r",15)
+                      .attr("r", 1.5 * d.count)
                       
                       //Add tooltip
                      div.html(d.name)
@@ -94,7 +97,7 @@ d3.json("data.json", function(error, graph) {
         .on("mouseout", function(d,i){
                       d3.select(this).transition()
                       .duration("750")
-                      .attr("r",10)});
+                      .attr("r",1 * d.count)});
 
   node.append("title")
       .text(function(d) { return d.id; });
