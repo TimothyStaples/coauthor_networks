@@ -4,12 +4,14 @@ rm(list=ls())
 library(readxl)
 
 setwd("/home/timothy/Dropbox/Tim/CV/collabNetwork")
+myName = "Timothy L. Staples"
 
 # cycle through wos subfolder to import 500 paper blocks
 wosFiles <- list.files(path="./wos", include.dirs=TRUE)
 
 coAuthPapers <- do.call("rbind", lapply(1:length(wosFiles), function(n){
-  temp <- as.data.frame(read_excel(paste0("./wos/", wosFiles[n])))
+  temp <- as.data.frame(read_excel(paste0("./wos/", wosFiles[n])),
+                        stringAsFactors=FALSE)
   
   authorList <- strsplit(temp$`Author Full Names`, "; ")
   do.call("rbind", lapply(1:length(authorList), function(n1){
@@ -22,54 +24,90 @@ coAuthPapers <- do.call("rbind", lapply(1:length(wosFiles), function(n){
 coAuthPapers$surname <- substr(coAuthPapers$auth,
                                1, regexpr(", ", coAuthPapers$auth)-1)
 coAuthPapers$first <- substr(coAuthPapers$auth,
-                               regexpr(", ", coAuthPapers$auth)+2, nchar(coAuthPapers$auth))
+                               regexpr(", ", coAuthPapers$auth)+2, 
+                             nchar(as.character(coAuthPapers$auth)))
 coAuthPapers$full <- paste0(coAuthPapers$first, " ", coAuthPapers$surname)
 
 # now make a co-author table
 authors <- sort(unique(coAuthPapers$full))
-coAuthMat <- matrix(0, nrow = length(authors) , ncol = length(authors),
-                    dimnames=list(authors, authors))
-for(name in authors){
-print(name)
-  # get authored papers
-  subPapers <- coAuthPapers[coAuthPapers$full == name,]
-  subPapers <- coAuthPapers[coAuthPapers$pID %in% subPapers$pID,]
-  
-  coTable <- table(subPapers$full)
-  
-  coAuthMat[cbind(which(rownames(coAuthMat) == name),
-                  match(names(coTable), colnames(coAuthMat)))] = coTable
-  
-}
+
+coAuthMat <- do.call("rbind", 
+                     tapply(coAuthPapers$full, 
+                            coAuthPapers$pID, 
+                            function(x){expand.grid(x, x)}, simplify=FALSE))
+coAuthMat <- table(coAuthMat$Var1, coAuthMat$Var2)
+sort(coAuthMat["Claire E. Wainwright",], decreasing=TRUE)
+
+# coAuthMat <- matrix(0, nrow = length(authors) , ncol = length(authors),
+#                     dimnames=list(authors, authors))
+# 
+# 
+# for(name in authors){
+# print(name)
+#   # get authored papers
+#   subPapers <- coAuthPapers[coAuthPapers$full == name,]
+#   subPapers <- coAuthPapers[coAuthPapers$pID %in% subPapers$pID,]
+#   
+#   coTable <- table(subPapers$full)
+#   
+#   coAuthMat[cbind(which(rownames(coAuthMat) == name),
+#                   match(names(coTable), colnames(coAuthMat)))] = coTable
+#   
+# }
 
 
-mycoAuth <- colnames(coAuthMat[,coAuthMat["Timothy L. Staples",] > 0])
+mycoAuth <- colnames(coAuthMat[,coAuthMat[myName,] > 0])
 mycoAuthMat <- coAuthMat[mycoAuth, ]
 mycoAuthMat <- mycoAuthMat[, colSums(mycoAuthMat > 0) > 1]
 
 aTab <- data.frame(source = rep(rownames(mycoAuthMat), ncol(mycoAuthMat)),
                    target = rep(colnames(mycoAuthMat), each=nrow(mycoAuthMat)),
-                   count=as.vector(mycoAuthMat))
+                   count=as.vector(mycoAuthMat), stringsAsFactors = FALSE)
 aTab <- aTab[aTab$source != aTab$target,]
 aTab <- aTab[aTab$count > 0,]
-aTab$primary <- ifelse(aTab$target %in% mycoAuth, "#324158", "#8C96A6")
-aTab$width <- ifelse(aTab$target %in% mycoAuth, 2, 0.5)
-
-aTab[aTab$source == "Timothy L. Staples"]
+aTab$primary <- ifelse(aTab$target %in% mycoAuth &
+                       (aTab$source == myName | aTab$target == myName), 
+                       "#324158", 
+                       "#8C96A6")
+aTab$width <- ifelse(aTab$target %in% mycoAuth &
+                       (aTab$source == myName | aTab$target == myName), 2, 0.5)
 
 countWithMe <- sapply(split(aTab, f=aTab$target), function(x){
-  sum(x$count[x$source == "Timothy L. Staples"])
+  sum(x$count[x$source == myName])
 })
 
-
-  
 # convert table into graph
 library(igraph)
 network=graph_from_data_frame(d=aTab, directed=F)
 
 V(network)$count = countWithMe[match(V(network)$name, names(countWithMe))]
-V(network)$count <- ifelse(V(network)$count == 0, 5, 10*V(network)$count)
-V(network)$primary <- aTab$primary[match(V(network)$name, aTab$target)]
+V(network)$count <- ifelse(V(network)$count == 0, 5, 5*V(network)$count)
+V(network)$count[V(network)$name == myName] = 15
+V(network)$primary = "#8C96A6"
+V(network)$primary[V(network)$name %in% mycoAuth] = "#324158"
+V(network)$primary[V(network)$name == myName] = "white"
+
+V(network)$label = V(network)$name
+V(network)$label[!V(network)$name %in% mycoAuth]=""
+
+
+url <- read.csv("url.csv")
+
+V(network)$url = NA
+V(network)$url[match(url$name,
+                     V(network)$name)] = url$url
+
+V(network)$hasurl <- !is.na(V(network)$url)
+
+V(network)$offlabel = V(network)$name
+V(network)$offlabel[V(network)$name %in% mycoAuth]=""
+V(network)$offlabel[match(url$name,
+                       V(network)$name)]= url$label
+
+
+V(network)$width = 0
+V(network)$width[V(network)$name == myName] = 5
+V(network)$strokeCol = "#324158"
 
 # Transform it in a JSON format for d3.js
 library(d3r)
