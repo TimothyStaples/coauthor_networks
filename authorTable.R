@@ -6,6 +6,9 @@ library(readxl)
 setwd("/home/timothy/Dropbox/Tim/CV/collabNetwork")
 myName = "Timothy L. Staples"
 
+myPapers <- read.csv("wos.csv", stringsAsFactors = FALSE)
+myCoAuth <- sort(unique(unlist(strsplit(myPapers$Author.Full.Names, "; ",))))
+paste0("AU = (", paste0(myCoAuth, collapse = ") OR ("), ")")
 # cycle through wos subfolder to import 500 paper blocks
 wosFiles <- list.files(path="./wos", include.dirs=TRUE)
 
@@ -36,25 +39,6 @@ coAuthMat <- do.call("rbind",
                             coAuthPapers$pID, 
                             function(x){expand.grid(x, x)}, simplify=FALSE))
 coAuthMat <- table(coAuthMat$Var1, coAuthMat$Var2)
-sort(coAuthMat["Claire E. Wainwright",], decreasing=TRUE)
-
-# coAuthMat <- matrix(0, nrow = length(authors) , ncol = length(authors),
-#                     dimnames=list(authors, authors))
-# 
-# 
-# for(name in authors){
-# print(name)
-#   # get authored papers
-#   subPapers <- coAuthPapers[coAuthPapers$full == name,]
-#   subPapers <- coAuthPapers[coAuthPapers$pID %in% subPapers$pID,]
-#   
-#   coTable <- table(subPapers$full)
-#   
-#   coAuthMat[cbind(which(rownames(coAuthMat) == name),
-#                   match(names(coTable), colnames(coAuthMat)))] = coTable
-#   
-# }
-
 
 mycoAuth <- colnames(coAuthMat[,coAuthMat[myName,] > 0])
 mycoAuthMat <- coAuthMat[mycoAuth, ]
@@ -90,7 +74,6 @@ V(network)$primary[V(network)$name == myName] = "white"
 V(network)$label = V(network)$name
 V(network)$label[!V(network)$name %in% mycoAuth]=""
 
-
 url <- read.csv("url.csv")
 
 V(network)$url = NA
@@ -118,100 +101,100 @@ write(data_json, "/home/timothy/Dropbox/Tim/CV/collabNetwork/data.json")
 
 
 # trying to plumb Google Scholar (API keeps thinking I'm a bot :()
-
-
-install.packages("devtools")
-install.packages("d3r")
-
-library(devtools)
-install_github("jkeirstead/scholar")
-library(scholar)
-
-# start by finding your ID
-myName <- "Timothy L Staples"
-
-myID <- get_scholar_id(last_name = "Staples", 
-                       first_name = "Timothy", 
-                       affiliation = NA)
-
-# now get your publications
-myPubs <- get_publications(id=myID, sortby="year", pagesize=100)
-
-# sort through your papers to get full author lists
-myCoA <- get_complete_authors(id = myID, pubid = myPubs$pubid, initials = FALSE)
-myCoAinit <- get_complete_authors(id = myID, pubid = myPubs$pubid, initials = TRUE)
-
-myCoAsave <- myCoA
-myCoAinitsave <- myCoAinit
-# split these into separate strings
-myCoAv <- unlist(strsplit(myCoA, ", "))
-myCoAinit <- unlist(strsplit(myCoAinit, ", "))
-myCoAvunique <- myCoAv[!duplicated(myCoAinit)]
-
-myCoAsur <- substr(myCoAvunique,
-                   sapply(gregexpr(" ", myCoAvunique), function(x){rev(x)[1]})+1,
-                   nchar(myCoAvunique))
-myCoAfirst <- substr(myCoAvunique, 1, 
-                     sapply(gregexpr(" ", myCoAvunique), function(x){rev(x)[1]})-1)
-
-# now cycle through each co-author, looking first for an initialled profile,
-# and then for non-initialled
-n<-5
-aTab <- do.call("rbind", lapply(1:length(myCoAvunique), function(n){
-  
-  Asur <- myCoAsur[n]
-  Afirst <- myCoAfirst[n]
-  print(paste0("Looking for... ", paste(Afirst, Asur)))
-  
-  # this function seems to need both first and last names to find stuff
-  
-  Aid <- try(get_scholar_id(first_name = Afirst,
-                            last_name = Asur),
-             silent=TRUE)
-  
-  # try removing initials
-  if(class(Aid) == "try-error" & !grepl(" ", Afirst)){
-    print("...No Scholar ID")
-    return(NULL)
-  }
-  
-  if(class(Aid) == "try-error" & grepl(" ", Afirst)){
-    Aid = try(get_scholar_id(first_name = substr(Afirst, 1, regexpr(" ", Afirst)-1),
-                             last_name = Asur),
-              silent=TRUE)
-  }
-  
-  if(class(Aid) == "try-error"){
-    print("...No Scholar ID")
-    return(NULL)
-  }
-  
-  # get all paper Ids from authors (the 100 most recent). This sometimes
-  # fails if there's too many for an author (might be a workaround to loop
-  # through slowly)
-  APubs <- try(get_publications(id=Aid, sortby="year", pagesize=10, flush=TRUE),
-               silent=TRUE)
-  
-  if(class(APubs) == "try-error"){
-    print("...author has too many papers!")
-    return(NULL)
-  }
-  
-  # now get unique list of authors, only keeping them if they're in your
-  # coauthor list (we need to keep the network reasonably sized somehow!)
-  AcoA <- get_complete_authors(id=Aid, pubid=APubs$pubid, initials = FALSE)
-  AcoAinit <- get_complete_authors(id=Aid, pubid=APubs$pubid, initials = TRUE)
-  
-  # match co-authors to my co-authors
-  ACoAv <- unlist(strsplit(AcoA, ", "))
-  ACoAinit <- unlist(strsplit(AcoAinit, ", "))
-  ACoAv <- ACoAv[ACoAv %in% myCoAv]
-  
-  # make a table, removing self-references and references to me
-  ACoTab <- as.data.frame(table(ACoAv))
-  ACoTab <- ACoTab[!ACoTab[,1] %in% c(paste(Afirst, Asur), myName),]
-  ACoTab$A <- paste(Afirst, Asur)
-  
-  return(ACoTab)
-  
-}))
+# 
+# 
+# install.packages("devtools")
+# install.packages("d3r")
+# 
+# library(devtools)
+# install_github("jkeirstead/scholar")
+# library(scholar)
+# 
+# # start by finding your ID
+# myName <- "Timothy L Staples"
+# 
+# myID <- get_scholar_id(last_name = "Staples", 
+#                        first_name = "Timothy", 
+#                        affiliation = NA)
+# 
+# # now get your publications
+# myPubs <- get_publications(id=myID, sortby="year", pagesize=100)
+# 
+# # sort through your papers to get full author lists
+# myCoA <- get_complete_authors(id = myID, pubid = myPubs$pubid, initials = FALSE)
+# myCoAinit <- get_complete_authors(id = myID, pubid = myPubs$pubid, initials = TRUE)
+# 
+# myCoAsave <- myCoA
+# myCoAinitsave <- myCoAinit
+# # split these into separate strings
+# myCoAv <- unlist(strsplit(myCoA, ", "))
+# myCoAinit <- unlist(strsplit(myCoAinit, ", "))
+# myCoAvunique <- myCoAv[!duplicated(myCoAinit)]
+# 
+# myCoAsur <- substr(myCoAvunique,
+#                    sapply(gregexpr(" ", myCoAvunique), function(x){rev(x)[1]})+1,
+#                    nchar(myCoAvunique))
+# myCoAfirst <- substr(myCoAvunique, 1, 
+#                      sapply(gregexpr(" ", myCoAvunique), function(x){rev(x)[1]})-1)
+# 
+# # now cycle through each co-author, looking first for an initialled profile,
+# # and then for non-initialled
+# n<-5
+# aTab <- do.call("rbind", lapply(1:length(myCoAvunique), function(n){
+#   
+#   Asur <- myCoAsur[n]
+#   Afirst <- myCoAfirst[n]
+#   print(paste0("Looking for... ", paste(Afirst, Asur)))
+#   
+#   # this function seems to need both first and last names to find stuff
+#   
+#   Aid <- try(get_scholar_id(first_name = Afirst,
+#                             last_name = Asur),
+#              silent=TRUE)
+#   
+#   # try removing initials
+#   if(class(Aid) == "try-error" & !grepl(" ", Afirst)){
+#     print("...No Scholar ID")
+#     return(NULL)
+#   }
+#   
+#   if(class(Aid) == "try-error" & grepl(" ", Afirst)){
+#     Aid = try(get_scholar_id(first_name = substr(Afirst, 1, regexpr(" ", Afirst)-1),
+#                              last_name = Asur),
+#               silent=TRUE)
+#   }
+#   
+#   if(class(Aid) == "try-error"){
+#     print("...No Scholar ID")
+#     return(NULL)
+#   }
+#   
+#   # get all paper Ids from authors (the 100 most recent). This sometimes
+#   # fails if there's too many for an author (might be a workaround to loop
+#   # through slowly)
+#   APubs <- try(get_publications(id=Aid, sortby="year", pagesize=10, flush=TRUE),
+#                silent=TRUE)
+#   
+#   if(class(APubs) == "try-error"){
+#     print("...author has too many papers!")
+#     return(NULL)
+#   }
+#   
+#   # now get unique list of authors, only keeping them if they're in your
+#   # coauthor list (we need to keep the network reasonably sized somehow!)
+#   AcoA <- get_complete_authors(id=Aid, pubid=APubs$pubid, initials = FALSE)
+#   AcoAinit <- get_complete_authors(id=Aid, pubid=APubs$pubid, initials = TRUE)
+#   
+#   # match co-authors to my co-authors
+#   ACoAv <- unlist(strsplit(AcoA, ", "))
+#   ACoAinit <- unlist(strsplit(AcoAinit, ", "))
+#   ACoAv <- ACoAv[ACoAv %in% myCoAv]
+#   
+#   # make a table, removing self-references and references to me
+#   ACoTab <- as.data.frame(table(ACoAv))
+#   ACoTab <- ACoTab[!ACoTab[,1] %in% c(paste(Afirst, Asur), myName),]
+#   ACoTab$A <- paste(Afirst, Asur)
+#   
+#   return(ACoTab)
+#   
+# }))
