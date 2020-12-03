@@ -19,7 +19,8 @@ coAuthPapers <- do.call("rbind", lapply(1:length(wosFiles), function(n){
   authorList <- strsplit(temp$`Author Full Names`, "; ")
   do.call("rbind", lapply(1:length(authorList), function(n1){
     data.frame(auth = authorList[[n1]],
-               pID = ((n-1)*500) + n1)
+               pID = ((n-1)*500) + n1,
+               pubYear = temp$`Publication Year`[n1])
   }))
   
   }))
@@ -31,8 +32,15 @@ coAuthPapers$first <- substr(coAuthPapers$auth,
                              nchar(as.character(coAuthPapers$auth)))
 coAuthPapers$full <- paste0(coAuthPapers$first, " ", coAuthPapers$surname)
 
-# now make a co-author table
-authors <- sort(unique(coAuthPapers$full))
+# make "me" the year of publication
+head(coAuthPapers)
+
+# now make a co-author table, only including my co-authors
+coAuthPapers <- droplevels(coAuthPapers[coAuthPapers$auth %in% myCoAuth,])
+
+# now make me a year
+myPubYears <- sort(unique(coAuthPapers$pubYear[coAuthPapers$full  %in% c(myName, "Timothy Staples")]))
+coAuthPapers$full[coAuthPapers$full %in% c(myName, "Timothy Staples")] = coAuthPapers$pubYear[coAuthPapers$full  %in% c(myName, "Timothy Staples")]
 
 coAuthMat <- do.call("rbind", 
                      tapply(coAuthPapers$full, 
@@ -40,24 +48,29 @@ coAuthMat <- do.call("rbind",
                             function(x){expand.grid(x, x)}, simplify=FALSE))
 coAuthMat <- table(coAuthMat$Var1, coAuthMat$Var2)
 
-mycoAuth <- colnames(coAuthMat[,coAuthMat[myName,] > 0])
-mycoAuthMat <- coAuthMat[mycoAuth, ]
-mycoAuthMat <- mycoAuthMat[, colSums(mycoAuthMat > 0) > 1]
+aTab <- data.frame(source = rep(rownames(coAuthMat), ncol(coAuthMat)),
+                   target = rep(colnames(coAuthMat), each=nrow(coAuthMat)),
+                   count=as.vector(coAuthMat), stringsAsFactors = FALSE)
 
-aTab <- data.frame(source = rep(rownames(mycoAuthMat), ncol(mycoAuthMat)),
-                   target = rep(colnames(mycoAuthMat), each=nrow(mycoAuthMat)),
-                   count=as.vector(mycoAuthMat), stringsAsFactors = FALSE)
+for(n in 1:(length(myPubYears)-1)){
+
+  aTab$count[aTab$source %in% myPubYears[n] & 
+             aTab$target %in% myPubYears[n+1]] = 1
+  
+}
+
 aTab <- aTab[aTab$source != aTab$target,]
 aTab <- aTab[aTab$count > 0,]
-aTab$primary <- ifelse(aTab$target %in% mycoAuth &
-                       (aTab$source == myName | aTab$target == myName), 
-                       "#324158", 
-                       "#8C96A6")
-aTab$width <- ifelse(aTab$target %in% mycoAuth &
-                       (aTab$source == myName | aTab$target == myName), 2, 0.5)
+
+aTab$primary <- ifelse((aTab$source %in% myPubYears | aTab$target %in% myPubYears), 
+                       "#324158", "#8C96A6")
+
+aTab$width <- ifelse(aTab$source %in% myPubYears | aTab$target %in% myPubYears, 2, 0.5)
+aTab$width[aTab$source %in% myPubYears & aTab$target %in% myPubYears] = 7.5
 
 countWithMe <- sapply(split(aTab, f=aTab$target), function(x){
-  sum(x$count[x$source == myName])
+  if(x$target %in% myPubYears){return(4)}
+  sum(x$count[x$source %in% c(myPubYears)])
 })
 
 # convert table into graph
@@ -65,14 +78,16 @@ library(igraph)
 network=graph_from_data_frame(d=aTab, directed=F)
 
 V(network)$count = countWithMe[match(V(network)$name, names(countWithMe))]
-V(network)$count <- ifelse(V(network)$count == 0, 5, 5*V(network)$count)
-V(network)$count[V(network)$name == myName] = 15
-V(network)$primary = "#8C96A6"
-V(network)$primary[V(network)$name %in% mycoAuth] = "#324158"
-V(network)$primary[V(network)$name == myName] = "white"
+V(network)$count <- ifelse(V(network)$count == 0, 5, 3.5*V(network)$count)
+# V(network)$count[V(network)$name == myName] = 15
+
+V(network)$primary = "#324158"
+V(network)$primary[V(network)$name %in% myPubYears] = "white"
 
 V(network)$label = V(network)$name
-V(network)$label[!V(network)$name %in% mycoAuth]=""
+
+V(network)$shadow = "rgb(255, 255, 255) 2px 0px 0px, rgb(255, 255, 255) 1.75517px 0.958851px 0px, rgb(255, 255, 255) 1.0806px 1.68294px 0px, rgb(255, 255, 255) 0.141474px 1.99499px 0px, rgb(255, 255, 255) -0.832294px 1.81859px 0px, rgb(255, 255, 255) -1.60229px 1.19694px 0px, rgb(255, 255, 255) -1.97999px 0.28224px 0px, rgb(255, 255, 255) -1.87291px -0.701566px 0px, rgb(255, 255, 255) -1.30729px -1.51361px 0px, rgb(255, 255, 255) -0.421592px -1.95506px 0px, rgb(255, 255, 255) 0.567324px -1.91785px 0px, rgb(255, 255, 255) 1.41734px -1.41108px 0px, rgb(255, 255, 255) 1.92034px -0.558831px 0px"
+V(network)$shadow[V(network)$name %in% myPubYears] = "rgb(50, 65, 88) 2px 0px 0px, rgb(50, 65, 88) 1.75517px 0.958851px 0px, rgb(50, 65, 88) 1.0806px 1.68294px 0px, rgb(50, 65, 88) 0.141474px 1.99499px 0px, rgb(50, 65, 88) -0.832294px 1.81859px 0px, rgb(50, 65, 88) -1.60229px 1.19694px 0px, rgb(50, 65, 88) -1.97999px 0.28224px 0px, rgb(50, 65, 88) -1.87291px -0.701566px 0px, rgb(50, 65, 88) -1.30729px -1.51361px 0px, rgb(50, 65, 88) -0.421592px -1.95506px 0px, rgb(50, 65, 88) 0.567324px -1.91785px 0px, rgb(50, 65, 88) 1.41734px -1.41108px 0px, rgb(50, 65, 88) 1.92034px -0.558831px 0px"
 
 url <- read.csv("url.csv")
 
@@ -87,10 +102,10 @@ V(network)$offlabel[V(network)$name %in% mycoAuth]=""
 V(network)$offlabel[match(url$name,
                        V(network)$name)]= url$label
 
-
 V(network)$width = 0
-V(network)$width[V(network)$name == myName] = 5
+V(network)$width[V(network)$name %in% myPubYears] = 5
 V(network)$strokeCol = "#324158"
+V(network)$strokeCol[V(network)$name %in% myPubYears] = "#324158"
 
 # Transform it in a JSON format for d3.js
 library(d3r)
@@ -98,7 +113,6 @@ data_json <- d3_igraph(network)
 
 # Save this file
 write(data_json, "/home/timothy/Dropbox/Tim/CV/collabNetwork/data.json")
-
 
 # trying to plumb Google Scholar (API keeps thinking I'm a bot :()
 # 
