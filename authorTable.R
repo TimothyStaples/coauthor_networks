@@ -2,15 +2,16 @@
 rm(list=ls())
 
 library(readxl)
+library(d3r)
 
 setwd("/home/timothy/Dropbox/Tim/CV/collabNetwork")
 myName = "Timothy L. Staples"
 
-myPapers <- read.csv("wos.csv", stringsAsFactors = FALSE)
+myPapers <- read.csv("wos1.csv", stringsAsFactors = FALSE)
 myCoAuth <- sort(unique(unlist(strsplit(myPapers$Author.Full.Names, "; ",))))
 paste0("AU = (", paste0(myCoAuth, collapse = ") OR ("), ")")
 # cycle through wos subfolder to import 500 paper blocks
-wosFiles <- list.files(path="./wos", include.dirs=TRUE)
+wosFiles <- list.files(path="./wos", include.dirs=TRUE, pattern=".xls")
 
 coAuthPapers <- do.call("rbind", lapply(1:length(wosFiles), function(n){
   temp <- as.data.frame(read_excel(paste0("./wos/", wosFiles[n])),
@@ -98,7 +99,7 @@ V(network)$url[match(url$name,
 V(network)$hasurl <- !is.na(V(network)$url)
 
 V(network)$offlabel = V(network)$name
-V(network)$offlabel[V(network)$name %in% mycoAuth]=""
+V(network)$offlabel[V(network)$name %in% myCoAuth]=""
 V(network)$offlabel[match(url$name,
                        V(network)$name)]= url$label
 
@@ -108,7 +109,7 @@ V(network)$strokeCol = "#324158"
 V(network)$strokeCol[V(network)$name %in% myPubYears] = "#324158"
 
 # Transform it in a JSON format for d3.js
-library(d3r)
+
 data_json <- d3_igraph(network)
 
 # Save this file
