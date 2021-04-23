@@ -90,6 +90,13 @@ V(network)$label = V(network)$name
 V(network)$shadow = "rgb(255, 255, 255) 2px 0px 0px, rgb(255, 255, 255) 1.75517px 0.958851px 0px, rgb(255, 255, 255) 1.0806px 1.68294px 0px, rgb(255, 255, 255) 0.141474px 1.99499px 0px, rgb(255, 255, 255) -0.832294px 1.81859px 0px, rgb(255, 255, 255) -1.60229px 1.19694px 0px, rgb(255, 255, 255) -1.97999px 0.28224px 0px, rgb(255, 255, 255) -1.87291px -0.701566px 0px, rgb(255, 255, 255) -1.30729px -1.51361px 0px, rgb(255, 255, 255) -0.421592px -1.95506px 0px, rgb(255, 255, 255) 0.567324px -1.91785px 0px, rgb(255, 255, 255) 1.41734px -1.41108px 0px, rgb(255, 255, 255) 1.92034px -0.558831px 0px"
 V(network)$shadow[V(network)$name %in% myPubYears] = "rgb(50, 65, 88) 2px 0px 0px, rgb(50, 65, 88) 1.75517px 0.958851px 0px, rgb(50, 65, 88) 1.0806px 1.68294px 0px, rgb(50, 65, 88) 0.141474px 1.99499px 0px, rgb(50, 65, 88) -0.832294px 1.81859px 0px, rgb(50, 65, 88) -1.60229px 1.19694px 0px, rgb(50, 65, 88) -1.97999px 0.28224px 0px, rgb(50, 65, 88) -1.87291px -0.701566px 0px, rgb(50, 65, 88) -1.30729px -1.51361px 0px, rgb(50, 65, 88) -0.421592px -1.95506px 0px, rgb(50, 65, 88) 0.567324px -1.91785px 0px, rgb(50, 65, 88) 1.41734px -1.41108px 0px, rgb(50, 65, 88) 1.92034px -0.558831px 0px"
 
+# add coordinates for each year
+yearVs <- !is.na(as.numeric(V(network)$name))
+yearYs <- seq(-length(yearVs), length(yearVs), len=sum(yearVs))
+V(network)$cat = 0
+V(network)$cat[yearVs] = yearYs
+V(network)$catStrength = as.numeric(yearVs)
+
 url <- read.csv("url.csv")
 
 V(network)$url = NA

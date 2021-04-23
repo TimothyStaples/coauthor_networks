@@ -32,10 +32,18 @@ svg.append("rect")
     .attr("fill", "#C3CED4");
 
 var simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-600))
-    .force('collision', d3.forceCollide().radius(function(d) {return d.count}))
-    .force("center", d3.forceCenter(width / 2, height / 2));
+    //.force("y", d3.forceY().y(function(d){ return d.cat}))
+    .force("y", d3.forceY().y(function(d){return height/2 + 10*d.cat})
+                           .strength(function(d){return 0.02 + 0.5 * d.catStrength}))
+    .force("x", d3.forceX().x(function(d){return width/2})
+                           .strength(function(d){return 0.02 + 0.5 * d.catStrength}))
+    .force("link", d3.forceLink().id(function(d) { return d.id})
+                                 .strength(function(d){return 0.015}))
+    .force("charge", d3.forceManyBody().strength(-100)
+                                       .distanceMax(500))
+                                        //.distanceMin(0))
+    .force('collision', d3.forceCollide().radius(function(d) {return 10 + d.count + 50 * d.catStrength}));
+    //.force("center", d3.forceCenter(width / 2, height / 2));
 
 d3.json("data.json", function(error, graph) {
   if (error) throw error;
