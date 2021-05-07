@@ -101,14 +101,14 @@ url <- read.csv("url.csv")
 
 V(network)$url = NA
 V(network)$url[match(url$name,
-                     V(network)$name)] = url$url
+                     V(network)$name)] = as.character(url$url)
 
 V(network)$hasurl <- !is.na(V(network)$url)
 
 V(network)$offlabel = V(network)$name
 V(network)$offlabel[V(network)$name %in% myCoAuth]=""
 V(network)$offlabel[match(url$name,
-                       V(network)$name)]= url$label
+                       V(network)$name)]= as.character(url$label)
 
 V(network)$width = 0
 V(network)$width[V(network)$name %in% myPubYears] = 5

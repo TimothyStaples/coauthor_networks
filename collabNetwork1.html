@@ -18,8 +18,9 @@ text {
 }
 
 </style>
-<svg width="1980" height="1028"></svg>
+<svg width="800" height="1028"></svg>
 <script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="d3-force-sampled.js"></script>
 <script>
 
 var svg = d3.select("svg"),
@@ -32,18 +33,20 @@ svg.append("rect")
     .attr("fill", "#C3CED4");
 
 var simulation = d3.forceSimulation()
-    //.force("y", d3.forceY().y(function(d){ return d.cat}))
     .force("y", d3.forceY().y(function(d){return height/2 + 10*d.cat})
-                           .strength(function(d){return 0.02 + 0.5 * d.catStrength}))
+                          .strength(function(d){return 0.02 + 0.2 * d.catStrength}))
     .force("x", d3.forceX().x(function(d){return width/2})
-                           .strength(function(d){return 0.02 + 0.5 * d.catStrength}))
+                           .strength(function(d){return 0.02 + 0.2 * d.catStrength}))
     .force("link", d3.forceLink().id(function(d) { return d.id})
-                                 .strength(function(d){return 0.015}))
-    .force("charge", d3.forceManyBody().strength(-100)
+                               .strength(function(d){return 0.05}))
+    .force("charge", d3.forceManyBodySampled()
+                                       .strength(-400)
                                        .distanceMax(500))
                                         //.distanceMin(0))
-    .force('collision', d3.forceCollide().radius(function(d) {return 10 + d.count + 50 * d.catStrength}));
-    //.force("center", d3.forceCenter(width / 2, height / 2));
+    .force('collision', d3.forceCollide().radius(function(d) {return 10 + d.count + 50 * d.catStrength}))
+    .force("center", d3.forceCenter()
+                          .x(width / 2)
+                          .y(height / 2));
 
 d3.json("data.json", function(error, graph) {
   if (error) throw error;
