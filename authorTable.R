@@ -39,6 +39,9 @@ head(coAuthPapers)
 # now make a co-author table, only including my co-authors
 coAuthPapers <- droplevels(coAuthPapers[coAuthPapers$auth %in% myCoAuth,])
 
+
+coAuthPapers[coAuthPapers$full  %in% c(myName, "Timothy Staples"),]
+
 # now make me a year
 myPubYears <- sort(unique(coAuthPapers$pubYear[coAuthPapers$full  %in% c(myName, "Timothy Staples")]))
 coAuthPapers$full[coAuthPapers$full %in% c(myName, "Timothy Staples")] = coAuthPapers$pubYear[coAuthPapers$full  %in% c(myName, "Timothy Staples")]
