@@ -1,13 +1,13 @@
-# input my papers
 rm(list=ls())
 
 library(readxl)
 library(d3r)
+library(jsonlite)
 
 setwd("/home/timothy/Dropbox/Tim/CV/collabNetwork")
 myName = "Timothy L. Staples"
 
-myPapers <- read.csv("wos1.csv", stringsAsFactors = FALSE)
+myPapers <- read.csv("wos2.csv", stringsAsFactors = FALSE)
 myCoAuth <- sort(unique(unlist(strsplit(myPapers$Author.Full.Names, "; ",))))
 paste0("AU = (", paste0(myCoAuth, collapse = ") OR ("), ")")
 # cycle through wos subfolder to import 500 paper blocks
