@@ -13,18 +13,12 @@ paste0("AU = (", paste0(myCoAuth, collapse = ") OR ("), ")")
 # cycle through wos subfolder to import 500 paper blocks
 wosFiles <- list.files(path="./wos", include.dirs=TRUE, pattern=".xls")
 
-coAuthPapers <- do.call("rbind", lapply(1:length(wosFiles), function(n){
-  temp <- as.data.frame(read_excel(paste0("./wos/", wosFiles[n])),
-                        stringAsFactors=FALSE)
-  
-  authorList <- strsplit(temp$`Author Full Names`, "; ")
-  do.call("rbind", lapply(1:length(authorList), function(n1){
-    data.frame(auth = authorList[[n1]],
-               pID = ((n-1)*500) + n1,
-               pubYear = temp$`Publication Year`[n1])
-  }))
-  
-  }))
+authorList <- strsplit(myPapers$Author.Full.Names, "; ")
+coAuthPapers <- do.call("rbind", lapply(1:length(authorList), function(n1){
+  data.frame(auth = authorList[[n1]],
+             pID = n1,
+             pubYear = myPapers$Publication.Year[n1])
+}))
 
 coAuthPapers$surname <- substr(coAuthPapers$auth,
                                1, regexpr(", ", coAuthPapers$auth)-1)
@@ -32,15 +26,6 @@ coAuthPapers$first <- substr(coAuthPapers$auth,
                                regexpr(", ", coAuthPapers$auth)+2, 
                              nchar(as.character(coAuthPapers$auth)))
 coAuthPapers$full <- paste0(coAuthPapers$first, " ", coAuthPapers$surname)
-
-# make "me" the year of publication
-head(coAuthPapers)
-
-# now make a co-author table, only including my co-authors
-coAuthPapers <- droplevels(coAuthPapers[coAuthPapers$auth %in% myCoAuth,])
-
-
-coAuthPapers[coAuthPapers$full  %in% c(myName, "Timothy Staples"),]
 
 # now make me a year
 myPubYears <- sort(unique(coAuthPapers$pubYear[coAuthPapers$full  %in% c(myName, "Timothy Staples")]))
@@ -55,6 +40,10 @@ coAuthMat <- table(coAuthMat$Var1, coAuthMat$Var2)
 aTab <- data.frame(source = rep(rownames(coAuthMat), ncol(coAuthMat)),
                    target = rep(colnames(coAuthMat), each=nrow(coAuthMat)),
                    count=as.vector(coAuthMat), stringsAsFactors = FALSE)
+
+#remove any edge not with me
+aTab <- aTab[aTab$source %in% unique(coAuthPapers$pubYear) |
+             aTab$target %in% unique(coAuthPapers$pubYear),]
 
 for(n in 1:(length(myPubYears)-1)){
 
