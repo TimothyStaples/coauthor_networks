@@ -4,10 +4,10 @@ library(readxl)
 library(d3r)
 library(jsonlite)
 
-setwd("/home/timothy/Dropbox/Tim/CV/collabNetwork")
+setwd("/Users/uqtstapl/Dropbox/Tim/CV/collabNetwork")
 myName = "Timothy L. Staples"
 
-myPapers <- read.csv("wos2.csv", stringsAsFactors = FALSE)
+myPapers <- read.csv("wos3.csv", stringsAsFactors = FALSE)
 myCoAuth <- sort(unique(unlist(strsplit(myPapers$Author.Full.Names, "; ",))))
 paste0("AU = (", paste0(myCoAuth, collapse = ") OR ("), ")")
 # cycle through wos subfolder to import 500 paper blocks
@@ -62,7 +62,7 @@ aTab$width <- ifelse(aTab$source %in% myPubYears | aTab$target %in% myPubYears, 
 aTab$width[aTab$source %in% myPubYears & aTab$target %in% myPubYears] = 7.5
 
 countWithMe <- sapply(split(aTab, f=aTab$target), function(x){
-  if(x$target %in% myPubYears){return(4)}
+  if(x$target[1] %in% myPubYears){return(4)}
   sum(x$count[x$source %in% c(myPubYears)])
 })
 
@@ -74,7 +74,7 @@ V(network)$count = countWithMe[match(V(network)$name, names(countWithMe))]
 V(network)$count <- ifelse(V(network)$count == 0, 5, 3.5*V(network)$count)
 # V(network)$count[V(network)$name == myName] = 15
 
-V(network)$primary = "#324158"
+V(network)$primary = "#FF7D00"
 V(network)$primary[V(network)$name %in% myPubYears] = "white"
 
 V(network)$label = V(network)$name
@@ -85,7 +85,7 @@ V(network)$shadow[V(network)$name %in% myPubYears] = "rgb(50, 65, 88) 2px 0px 0p
 # add coordinates for each year
 yearVs <- !is.na(as.numeric(V(network)$name))
 yearYs <- seq(-length(yearVs), length(yearVs), len=sum(yearVs))
-V(network)$cat = 0
+V(network)$cat = 5
 V(network)$cat[yearVs] = yearYs
 V(network)$catStrength = as.numeric(yearVs)
 
@@ -102,7 +102,7 @@ V(network)$offlabel[V(network)$name %in% myCoAuth]=""
 V(network)$offlabel[match(url$name,
                        V(network)$name)]= as.character(url$label)
 
-V(network)$width = 0
+V(network)$width = 2
 V(network)$width[V(network)$name %in% myPubYears] = 5
 V(network)$strokeCol = "#324158"
 V(network)$strokeCol[V(network)$name %in% myPubYears] = "#324158"
@@ -112,7 +112,7 @@ V(network)$strokeCol[V(network)$name %in% myPubYears] = "#324158"
 data_json <- d3_igraph(network)
 
 # Save this file
-write(data_json, "/home/timothy/Dropbox/Tim/CV/collabNetwork/data.json")
+write(data_json, "data1.json")
 
 # trying to plumb Google Scholar (API keeps thinking I'm a bot :()
 # 
